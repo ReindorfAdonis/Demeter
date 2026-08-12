@@ -1,0 +1,4 @@
+demeter-env/
+__pycache__/
+*.pycache
+.env
