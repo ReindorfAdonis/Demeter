@@ -1,8 +1,8 @@
 """
 brain.py — Demeter's core with RAG + conversation memory.
 Retrieves relevant chunks from the MoFA knowledge base (demeter.db) for real
-questions, keeps track of recent conversation for context, and skips
-document retrieval for small talk.
+questions, keeps track of recent conversation for context, and responds
+naturally to greetings, closings, and acknowledgements.
 """
 
 import os
@@ -20,7 +20,7 @@ OLLAMA_URL = "http://localhost:11434/api/generate"
 MODEL_NAME = "llama3.2"
 DB_FILE = "demeter.db"
 TOP_K = 3
-MAX_HISTORY_TURNS = 5  # how many past exchanges to remember
+MAX_HISTORY_TURNS = 5
 
 # --- Load embedding model once ---
 print("Loading embedding model...")
@@ -30,17 +30,34 @@ print("Ready.\n")
 # --- Conversation memory (in-memory, resets when program restarts) ---
 conversation_history = []
 
-# Simple small-talk detector — casual openers that don't need document lookup
-SMALL_TALK = {
+# --- Small talk detection: greetings, closings, acknowledgements ---
+
+GREETINGS = {
     "hey", "hi", "hello", "yo", "sup", "good morning", "good afternoon",
-    "good evening", "thanks", "thank you", "ok", "okay", "bye", "goodbye",
-    "how are you", "what's up", "whats up"
+    "good evening", "how are you", "what's up", "whats up"
 }
 
+CLOSINGS = {
+    "thanks", "thank you", "thanks a lot", "thank you so much",
+    "that will be all", "that's all", "thats all", "that is all",
+    "ok thanks", "okay thanks", "no that's all", "no thats all",
+    "bye", "goodbye", "bye bye", "see you", "that's it", "thats it",
+    "alright thanks", "great thanks", "ok that's all", "im done", "i'm done"
+}
 
-def is_small_talk(query):
+ACKNOWLEDGEMENTS = {"ok", "okay", "alright", "cool", "nice", "great"}
+
+
+def classify_message(query):
+    """Return 'greeting', 'closing', 'ack', or 'question'."""
     cleaned = query.strip().lower().strip("!?.")
-    return cleaned in SMALL_TALK or len(cleaned.split()) <= 2 and cleaned in SMALL_TALK
+    if cleaned in GREETINGS:
+        return "greeting"
+    if cleaned in CLOSINGS:
+        return "closing"
+    if cleaned in ACKNOWLEDGEMENTS:
+        return "ack"
+    return "question"
 
 
 def retrieve(query, top_k=TOP_K):
@@ -93,20 +110,31 @@ def build_history_block():
 
 
 def answer(query):
-    """Full RAG + memory answer."""
+    """Full RAG + memory answer, aware of greetings/closings/small talk."""
     history_block = build_history_block()
+    kind = classify_message(query)
 
-    if is_small_talk(query):
-        # Casual message — no document retrieval, just a natural reply
+    if kind == "greeting":
         prompt = f"""You are Demeter, a friendly offline agricultural assistant for Ghanaian farmers.
-Recent conversation:
-{history_block}
-
-The farmer just said: "{query}"
-
-Reply naturally and briefly, like a helpful person would. Don't mention documents or ask an unrelated question."""
+The farmer just greeted you: "{query}"
+Reply with a short, warm greeting back, and invite them to ask a farming question. Keep it to 1-2 sentences."""
         reply = ask_llm(prompt)
         sources = []
+
+    elif kind == "closing":
+        prompt = f"""You are Demeter, a friendly offline agricultural assistant for Ghanaian farmers.
+The farmer is wrapping up the conversation: "{query}"
+Reply with a short, warm sign-off (1 sentence), and let them know they can come back anytime with more questions."""
+        reply = ask_llm(prompt)
+        sources = []
+
+    elif kind == "ack":
+        prompt = f"""You are Demeter, a friendly offline agricultural assistant for Ghanaian farmers.
+The farmer just acknowledged something: "{query}"
+Reply briefly and naturally (1 sentence), and ask if there's anything else they need help with."""
+        reply = ask_llm(prompt)
+        sources = []
+
     else:
         results = retrieve(query)
         context = "\n\n".join(f"[From {src}]\n{chunk}" for _, src, chunk in results)
@@ -115,7 +143,9 @@ Reply naturally and briefly, like a helpful person would. Don't mention document
         prompt = f"""You are Demeter, an offline agricultural assistant for Ghanaian farmers.
 Answer the farmer's question using the information from the Ghana Ministry of Agriculture documents below,
 and take the recent conversation into account so your answer fits naturally as a follow-up if relevant.
-If the documents do not contain the answer, say so honestly and give general guidance, but make clear it is not from the documents.Recent conversation:
+If the documents do not contain the answer, say so honestly and give general guidance, but make clear it is not from the documents.
+
+Recent conversation:
 {history_block}
 
 --- DOCUMENTS ---
@@ -127,9 +157,7 @@ Farmer's question: {query}
 Answer clearly and practically:"""
         reply = ask_llm(prompt)
 
-    # Save this turn to memory
     conversation_history.append({"question": query, "answer": reply})
-
     return reply, sources
 
 

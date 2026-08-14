@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% block title %}Profile{% endblock %}
+
+{% block content %}
+<div class="page">
+  <p class="page-eyebrow">Your details</p>
+  <h1 class="page-title">Profile</h1>
+  <p class="page-sub">Tell Demeter about your farm so answers can be tailored to your crops and region.</p>
+
+  <div class="profile-card">
+    <div class="form-group">
+      <label for="p-name">Full name</label>
+      <input type="text" id="p-name" value="{{ profile.name }}" placeholder="e.g. Kwame Mensah">
+    </div>
+
+    <div class="form-group">
+      <label for="p-location">Farm location</label>
+      <input type="text" id="p-location" value="{{ profile.location }}" placeholder="e.g. Techiman, Bono East">
+    </div>
+
+    <div class="form-group">
+      <label for="p-phone">Phone number</label>
+      <input type="text" id="p-phone" value="{{ profile.phone }}" placeholder="e.g. 024 000 0000">
+    </div>
+
+    <div class="form-group">
+      <label>Crops you grow</label>
+      <div class="crop-tags" id="crop-tags">
+        {% for crop in profile.crops %}
+        <span class="crop-tag" data-crop="{{ crop }}">{{ crop }}<button type="button" onclick="removeCrop(this)">&times;</button></span>
+        {% endfor %}
+      </div>
+      <div class="add-crop-row">
+        <input type="text" id="new-crop" placeholder="e.g. Maize">
+        <button class="btn-secondary" onclick="addCrop()">Add</button>
+      </div>
+    </div>
+
+    <button class="btn-primary" id="save-profile-btn">Save changes</button>
+    <span class="save-confirm" id="save-confirm">✓ Saved</span>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/profile.js') }}"></script>
+{% endblock %}

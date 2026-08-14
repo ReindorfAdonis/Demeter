@@ -1,0 +1,68 @@
+{% extends "base.html" %}
+{% block title %}Settings{% endblock %}
+
+{% block content %}
+<div class="page">
+  <p class="page-eyebrow">Preferences</p>
+  <h1 class="page-title">Settings</h1>
+  <p class="page-sub">Control how Demeter runs on your device.</p>
+
+  <div class="settings-section">
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <h4>Voice replies</h4>
+        <p>Have Demeter read answers aloud, useful when your hands are full in the field.</p>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-voice-out">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <h4>Voice input</h4>
+        <p>Speak your questions instead of typing them.</p>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-voice-in">
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <h4>Auto-refresh news when online</h4>
+        <p>Fetch the latest farming news automatically whenever Wi-Fi is available.</p>
+      </div>
+      <label class="toggle">
+        <input type="checkbox" id="toggle-news" checked>
+        <span class="toggle-track"></span>
+      </label>
+    </div>
+  </div>
+
+  <p class="section-label">System</p>
+  <div class="settings-section">
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <h4>Language model</h4>
+        <p>Running locally through Ollama.</p>
+      </div>
+      <span class="settings-meta">llama3.2</span>
+    </div>
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <h4>Knowledge base</h4>
+        <p>Documents ingested from the Ghana Ministry of Food and Agriculture.</p>
+      </div>
+      <span class="settings-meta">demeter.db</span>
+    </div>
+    <div class="settings-row">
+      <div class="settings-row-text">
+        <h4>Version</h4>
+        <p>Demeter desktop</p>
+      </div>
+      <span class="settings-meta">0.1.0</span>
+    </div>
+  </div>
+</div>
+{% endblock %}

@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}Ask Demeter{% endblock %}
+
+{% block content %}
+<div class="chat-page">
+
+  <div class="chat-header">
+    <p class="page-eyebrow">The AI, grounded in MoFA knowledge</p>
+    <h1 class="page-title" style="font-size: 28px; margin-bottom: 0;">Ask Demeter</h1>
+  </div>
+
+  <div class="chat-scroll" id="chat-scroll">
+    <div class="chat-inner" id="chat-inner">
+      <div class="chat-empty" id="chat-empty">
+        <svg class="sprout" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+          <path d="M20 34C20 34 8 27.5 8 17.5C8 11 13 6 19 6C19.5 6 20 6.05 20 6.05C20 6.05 20.5 6 21 6C27 6 32 11 32 17.5C32 27.5 20 34 20 34Z" fill="#7A9A68"/>
+          <path d="M20 34C20 34 20 22 20 6" stroke="#2C4127" stroke-width="1.4" stroke-linecap="round"/>
+        </svg>
+        <h3>What's on your mind?</h3>
+        <p>Ask about planting seasons, pests, fertilizer, or anything from your farming documents.</p>
+      </div>
+    </div>
+  </div>
+
+  <div class="chat-input-bar">
+    <div class="chat-input-inner">
+      <textarea id="chat-input" placeholder="Ask about crops, seasons, pests…" rows="1"></textarea>
+      <button class="send-btn" id="send-btn">
+        <svg viewBox="0 0 24 24" fill="none"><path d="M4 12L20 4L14 20L11 13L4 12Z" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg>
+      </button>
+    </div>
+  </div>
+
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script src="{{ url_for('static', filename='js/chat.js') }}"></script>
+{% endblock %}

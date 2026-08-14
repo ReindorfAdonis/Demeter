@@ -1,0 +1,37 @@
+{% extends "base.html" %}
+{% block title %}Home{% endblock %}
+
+{% block content %}
+<div class="page">
+
+  <div class="home-hero">
+    <p class="home-hero-greeting">Welcome back, Reindorf</p>
+    <p class="home-hero-sub">Your fields, your questions, answered offline — right where you are, no signal required.</p>
+    <a href="/chat" class="home-hero-cta">
+      Ask Demeter something
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none"><path d="M5 12H19M19 12L13 6M19 12L13 18" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </a>
+  </div>
+
+  <p class="section-label">Today's farming news</p>
+
+  <div class="news-grid">
+    {% for item in news %}
+    <div class="news-card">
+      <span class="news-tag {% if 'Planting' in item.tag %}planting{% elif 'Market' in item.tag %}market{% elif 'Pest' in item.tag %}pest{% elif 'Subsidy' in item.tag %}subsidy{% endif %}">{{ item.tag }}</span>
+      <div class="news-body">
+        <h3>{{ item.title }}</h3>
+        <p>{{ item.summary }}</p>
+      </div>
+      <span class="news-date">{{ item.date }}</span>
+    </div>
+    {% endfor %}
+  </div>
+
+  <div class="offline-note">
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M12 8V12L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
+    Showing cached news from your last connection. Connect to Wi-Fi to refresh.
+  </div>
+
+</div>
+{% endblock %}
