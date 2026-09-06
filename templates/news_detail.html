@@ -1,0 +1,30 @@
+{% extends "base.html" %}
+{% block title %}{{ item.title }}{% endblock %}
+
+{% block content %}
+<div class="page">
+  <div class="news-detail-card">
+    <a href="/" class="back-link">← Back to home</a>
+
+    <span class="news-tag {% if 'Planting' in item.tag %}planting{% elif 'Market' in item.tag %}market{% elif 'Pest' in item.tag %}pest{% elif 'Subsidy' in item.tag %}subsidy{% endif %}">{{ item.tag }}</span>
+
+    <h1>{{ item.title }}</h1>
+    <div class="news-detail-meta">
+      <span>{{ item.date }}</span>
+      {% if item.link %}
+      <a href="{{ item.link }}" target="_blank" rel="noopener noreferrer">Open source</a>
+      {% endif %}
+    </div>
+
+    <p class="news-detail-body">
+      {{ item.content or item.summary }}
+    </p>
+
+    {% if item.link %}
+    <a class="news-read-more" href="{{ item.link }}" target="_blank" rel="noopener noreferrer">
+      Read full article
+    </a>
+    {% endif %}
+  </div>
+</div>
+{% endblock %}

@@ -22,9 +22,14 @@ CHUNK_SIZE = 500      # words per chunk
 CHUNK_OVERLAP = 50    # words shared between neighbouring chunks
 
 # --- Load the embedding model (downloads once, then works offline) ---
-print("Loading embedding model (first run downloads it, please wait)...")
-model = SentenceTransformer("all-MiniLM-L6-v2")
-print("Model loaded.\n")
+try:
+    print("Loading embedding model (first run downloads it, please wait)...")
+    model = SentenceTransformer("all-MiniLM-L6-v2")
+    print("Model loaded.\n")
+except Exception as exc:
+    print(f"Embedding model unavailable: {exc}")
+    print("Offline mode is enabled and the model is not cached locally. Download it on a connected machine first, or run this script with internet access.")
+    model = None
 
 
 def extract_text(pdf_path):

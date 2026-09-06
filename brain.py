@@ -13,7 +13,9 @@ import sqlite3
 import json
 import requests
 import numpy as np
-from sentence_transformers import SentenceTransformer
+
+# Loaded on first retrieval so the web server can start without the ML stack.
+SentenceTransformer = None
 
 # --- Config ---
 OLLAMA_URL = "http://localhost:11434/api/generate"
@@ -22,10 +24,55 @@ DB_FILE = "demeter.db"
 TOP_K = 3
 MAX_HISTORY_TURNS = 5
 
-# --- Load embedding model once ---
-print("Loading embedding model...")
-embedder = SentenceTransformer("all-MiniLM-L6-v2")
-print("Ready.\n")
+# --- Lazy embedding model loading ---
+embedder = None
+
+
+def has_local_embedding_model(model_name="all-MiniLM-L6-v2"):
+    """Check whether the sentence-transformers model is already cached locally."""
+    candidates = []
+    hf_home = os.environ.get("HF_HOME") or os.path.join(os.path.expanduser("~"), ".cache", "huggingface")
+    candidates.extend([
+        os.path.join(hf_home, "hub"),
+        os.path.join(hf_home, "transformers"),
+        os.path.join(os.path.expanduser("~"), ".cache", "torch", "sentence_transformers"),
+        os.path.join(os.path.expanduser("~"), ".cache", "sentence_transformers"),
+    ])
+
+    for base in candidates:
+        if not os.path.isdir(base):
+            continue
+        for entry in os.listdir(base):
+            if model_name in entry or f"sentence-transformers--{model_name}" in entry:
+                return True
+    return False
+
+
+def get_embedder():
+    """Create the embedding model only when it is needed."""
+    global embedder, SentenceTransformer
+    if embedder is not None:
+        return embedder
+
+    offline_mode = os.environ.get("HF_HUB_OFFLINE") == "1" or os.environ.get("TRANSFORMERS_OFFLINE") == "1"
+    if offline_mode and not has_local_embedding_model():
+        print("Embedding model unavailable offline: no local cached model was found.")
+        embedder = None
+        return None
+
+    try:
+        print("Loading embedding model...")
+        if SentenceTransformer is None:
+            from sentence_transformers import SentenceTransformer as model_class
+            SentenceTransformer = model_class
+        embedder = SentenceTransformer("all-MiniLM-L6-v2")
+        print("Ready.\n")
+    except Exception as exc:
+        print(f"Embedding model unavailable: {exc}")
+        embedder = None
+
+    return embedder
+
 
 # --- Conversation memory (in-memory, resets when program restarts) ---
 conversation_history = []
@@ -62,7 +109,11 @@ def classify_message(query):
 
 def retrieve(query, top_k=TOP_K):
     """Find the most relevant document chunks for a query."""
-    query_emb = np.array(embedder.encode(query))
+    model = get_embedder()
+    if model is None:
+        return []
+
+    query_emb = np.array(model.encode(query))
 
     conn = sqlite3.connect(DB_FILE)
     rows = conn.execute("SELECT source, chunk, embedding FROM knowledge").fetchall()

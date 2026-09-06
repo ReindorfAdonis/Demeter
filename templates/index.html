@@ -17,20 +17,28 @@
 
   <div class="news-grid">
     {% for item in news %}
-    <div class="news-card">
-      <span class="news-tag {% if 'Planting' in item.tag %}planting{% elif 'Market' in item.tag %}market{% elif 'Pest' in item.tag %}pest{% elif 'Subsidy' in item.tag %}subsidy{% endif %}">{{ item.tag }}</span>
-      <div class="news-body">
-        <h3>{{ item.title }}</h3>
-        <p>{{ item.summary }}</p>
+    <a href="/news/{{ loop.index0 }}" class="news-card-link">
+      <div class="news-card">
+        <span class="news-tag {% if 'Planting' in item.tag %}planting{% elif 'Market' in item.tag %}market{% elif 'Pest' in item.tag %}pest{% elif 'Subsidy' in item.tag %}subsidy{% endif %}">{{ item.tag }}</span>
+        <div class="news-body">
+          <h3>{{ item.title }}</h3>
+          <p>{{ item.summary }}</p>
+        </div>
+        <span class="news-date">{{ item.date }}</span>
       </div>
-      <span class="news-date">{{ item.date }}</span>
-    </div>
+    </a>
     {% endfor %}
   </div>
 
   <div class="offline-note">
     <svg width="13" height="13" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="9" stroke="currentColor" stroke-width="1.5"/><path d="M12 8V12L14.5 14.5" stroke="currentColor" stroke-width="1.5" stroke-linecap="round"/></svg>
-    Showing cached news from your last connection. Connect to Wi-Fi to refresh.
+    {% if news_status == 'live' %}
+      Live Ghana agriculture updates refreshed from the web.
+    {% elif news_status == 'cached' %}
+      Showing cached news from your last connection. Connect to Wi-Fi to refresh.
+    {% else %}
+      No live or cached agriculture feed is available right now. Showing default farming updates.
+    {% endif %}
   </div>
 
 </div>
