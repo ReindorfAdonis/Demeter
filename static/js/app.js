@@ -24,6 +24,8 @@ async function checkEngineStatus() {
 checkEngineStatus();
 setInterval(checkEngineStatus, 15000);
 
+window.addEventListener('online', () => window.location.reload());
+
 // Auto-grow textareas
 document.addEventListener('input', (e) => {
   if (e.target.tagName === 'TEXTAREA') {

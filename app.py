@@ -12,7 +12,7 @@ os.environ["TRANSFORMERS_OFFLINE"] = "1"
 import json
 import re
 import sqlite3
-from datetime import datetime
+from datetime import datetime, timezone
 from email.utils import parsedate_to_datetime
 from xml.etree import ElementTree as ET
 
@@ -121,6 +121,12 @@ def parse_news_feed(xml_text):
             continue
 
         content = summary or "Latest Ghana agriculture update from the field."
+        published_at = None
+        if published:
+            try:
+                published_at = parsedate_to_datetime(published).astimezone(timezone.utc).isoformat()
+            except (TypeError, ValueError, OverflowError):
+                pass
         item = {
             "tag": normalize_tag(title),
             "title": title,
@@ -128,6 +134,7 @@ def parse_news_feed(xml_text):
             "content": content,
             "date": published[:16] if published else datetime.now().strftime("%b %d, %Y"),
             "link": link,
+            "published_at": published_at,
         }
 
         if published:
@@ -147,29 +154,66 @@ def parse_news_feed(xml_text):
 
 
 def save_cached_news(news):
-    with open(NEWS_CACHE_FILE, "w", encoding="utf-8") as f:
-        json.dump(news, f, indent=2)
+    save_news_cache({"articles": news, "lastSuccessfulSync": datetime.now(timezone.utc).isoformat()})
+
+
+def save_news_cache(cache):
+    temporary_file = f"{NEWS_CACHE_FILE}.tmp"
+    with open(temporary_file, "w", encoding="utf-8") as f:
+        json.dump(cache, f, indent=2)
+    os.replace(temporary_file, NEWS_CACHE_FILE)
 
 
 def load_cached_news():
+    return load_news_cache()["articles"]
+
+
+def load_news_cache():
     if not os.path.exists(NEWS_CACHE_FILE):
-        return []
+        return {"articles": [], "lastSuccessfulSync": None}
     try:
         with open(NEWS_CACHE_FILE, "r", encoding="utf-8") as f:
             data = json.load(f)
         if isinstance(data, list):
-            return data
+            return {"articles": data, "lastSuccessfulSync": None}
+        if isinstance(data, dict) and isinstance(data.get("articles"), list):
+            return {
+                "articles": data["articles"],
+                "lastSuccessfulSync": data.get("lastSuccessfulSync"),
+            }
     except (json.JSONDecodeError, OSError):
-        return []
-    return []
+        pass
+    return {"articles": [], "lastSuccessfulSync": None}
 
 
-def fetch_live_news():
+def article_key(item):
+    return (item.get("link") or item.get("title") or "").strip().lower()
+
+
+def merge_news(existing, incoming):
+    merged = {}
+    for item in existing + incoming:
+        key = article_key(item)
+        if key:
+            merged[key] = item
+    return sort_news_by_date(list(merged.values()))
+
+
+def fetch_live_news(since=None, include_status=False):
     collected = []
+    successful_requests = 0
     for url in NEWS_URLS:
+        request_url = url
+        if since:
+            try:
+                since_date = datetime.fromisoformat(since.replace("Z", "+00:00")).date()
+                request_url = f"{url}+after:{since_date.isoformat()}"
+            except ValueError:
+                pass
         try:
-            response = requests.get(url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
+            response = requests.get(request_url, timeout=15, headers={"User-Agent": "Mozilla/5.0"})
             response.raise_for_status()
+            successful_requests += 1
             parsed = parse_news_feed(response.text)
             if parsed:
                 collected.extend(parsed)
@@ -179,16 +223,24 @@ def fetch_live_news():
     deduped = []
     seen = set()
     for item in collected:
-        key = item.get("title", "").lower()
+        key = article_key(item)
         if key and key not in seen:
             seen.add(key)
             deduped.append(item)
 
-    return deduped[:6]
+    if include_status:
+        return deduped, successful_requests > 0
+    return deduped
 
 
 def sort_news_by_date(news):
     def parse_sort_value(item):
+        published_at = item.get("published_at")
+        if published_at:
+            try:
+                return datetime.fromisoformat(published_at.replace("Z", "+00:00")).timestamp()
+            except (TypeError, ValueError, OverflowError):
+                pass
         raw = item.get("date", "")
         try:
             return parsedate_to_datetime(raw).timestamp()
@@ -202,16 +254,21 @@ def sort_news_by_date(news):
 
 
 def get_home_news():
+    cache = load_news_cache()
+    cached_news = cache["articles"]
     try:
-        live_news = fetch_live_news()
-        if live_news:
-            live_news = sort_news_by_date(live_news)
-            save_cached_news(live_news)
-            return live_news, "live"
+        live_news, sync_succeeded = fetch_live_news(cache.get("lastSuccessfulSync"), include_status=True)
+        if sync_succeeded:
+            merged_news = merge_news(cached_news, live_news)
+            save_news_cache({
+                "articles": merged_news,
+                "lastSuccessfulSync": datetime.now(timezone.utc).isoformat(),
+            })
+            if merged_news:
+                return merged_news[:6], "live"
     except Exception:
         pass
 
-    cached_news = load_cached_news()
     if cached_news:
         return sort_news_by_date(cached_news), "cached"
 
